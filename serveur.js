@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var express = require('express');
 var sensors = require('./sensors');
 var https = require('https');
