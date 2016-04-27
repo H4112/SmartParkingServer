@@ -64,9 +64,10 @@ exports.setInfoCapteur = function(req, res) {
 	console.log('Pushing update for sensor: ' + id); 	
 	
 	db.collection('sensors', function(err, collection) {
-		collection.findOne({'id':id}, function(err, etatActuel) {
-			if(etat != etatActuel){
-					collection.updateOne({'id':id}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date()}}, {safe:true}, function(err, result) {
+		collection.findOne({'id':id}, function(err, sensor) {
+			console.log("etat actuel :" + sensor.etat);
+			if(etat != sensor.etat){
+					collection.updateOne({'id':id}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).send({'Error':'An error has occurred'});
@@ -77,6 +78,7 @@ exports.setInfoCapteur = function(req, res) {
 					});
 			}else{
 				db.collection('sensors', function(err, collection) {
+					console.log("no update");
 					collection.updateOne({'id':id}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 							res.status(200).end();
 					});
