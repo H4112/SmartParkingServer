@@ -70,10 +70,10 @@ exports.setInfoCapteur = function(req, res) {
 					collection.updateOne({'id':id}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
-							res.status(500).send({'Error':'An error has occurred'});
+							res.status(500).end();
 						} else {
 							console.log('Updating sensor status, now:' + etat)
-							res.send(etat);
+							res.status(200).end();
 						}
 					});
 			}else{
