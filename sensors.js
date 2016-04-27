@@ -68,7 +68,7 @@ exports.setInfoCapteur = function(req, res) {
 		collection.findOne({'id':parseInt(id)}, function(err, sensor) {
 			console.log("etat actuel :" + sensor.etat);
 			if(etat != sensor.etat){
-					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, res) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).end();
@@ -80,7 +80,7 @@ exports.setInfoCapteur = function(req, res) {
 			}else{
 				db.collection('sensors', function(err, collection) {
 					console.log("no update");
-					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, res) {
 							res.status(200).end();
 					});
 				});
@@ -89,6 +89,42 @@ exports.setInfoCapteur = function(req, res) {
 	});
 
 };
+
+exports.getCapteursAProximite = function(req, res) {
+	var rayon = req.body.rayon;
+	var longitude = req.body.longitude;
+	var latitude = req.body.latitude;
+	
+    db.collection('sensors', function(err, collection) {
+        collection.find().toArray(function(err, items) {
+			var capteurs = items.map(function(sensor){
+				var d = getDistanceFromLatLonInKm(latitude, longitude, sensor.latitude, sensor.latitude);
+				if(d<= rayon){
+					return sensor;
+				}else return null;
+			});
+            res.status(200).send(capteurs);
+        });
+    });
+};
+
+function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
 
 
 // ----------------------------------------
