@@ -78,7 +78,7 @@ exports.setInfoCapteur = function(req, res) {
 			}else{
 				db.collection('sensors', function(err, collection) {
 					collection.updateOne({'id':id}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
-							res.status(200).send();
+							res.status(200).end();
 					});
 				});
 			}
