@@ -68,7 +68,7 @@ exports.setInfoCapteur = function(req, res) {
 		collection.findOne({'id':parseInt(id)}, function(err, sensor) {
 			console.log("etat actuel :" + sensor.etat);
 			if(etat != sensor.etat){
-					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).end();
