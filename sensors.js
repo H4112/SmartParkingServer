@@ -68,7 +68,7 @@ exports.setInfoCapteur = function(req, res) {
 		collection.findOne({'id':parseInt(id)}, function(err, sensor) {
 			console.log("etat actuel :" + sensor.etat);
 			if(etat != sensor.etat){
-					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, res) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).end();
@@ -80,7 +80,7 @@ exports.setInfoCapteur = function(req, res) {
 			}else{
 				db.collection('sensors', function(err, collection) {
 					console.log("no update");
-					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, res) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, result) {
 							res.status(200).end();
 					});
 				});
@@ -119,7 +119,7 @@ function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
     ; 
   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   var d = R * c; // Distance in km
-  return d;
+  return d*1000;
 }
 
 function deg2rad(deg) {
