@@ -98,7 +98,7 @@ exports.getCapteursAProximite = function(req, res) {
     db.collection('sensors', function(err, collection) {
         collection.find().toArray(function(err, items) {
 			var capteurs = items.map(function(sensor){
-				var d = getDistanceFromLatLonInKm(latitude, longitude, sensor.latitude, sensor.latitude);
+				var d = getDistanceFromLatLonInM(latitude, longitude, sensor.latitude, sensor.latitude);
 				if(d<= rayon){
 					return sensor;
 				}else return null;
@@ -108,8 +108,8 @@ exports.getCapteursAProximite = function(req, res) {
     });
 };
 
-function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
-  var R = 6371; // Radius of the earth in km
+function getDistanceFromLatLonInM(lat1,lon1,lat2,lon2) {
+  var R = 6371008.8; // Radius of the earth in m
   var dLat = deg2rad(lat2-lat1);  // deg2rad below
   var dLon = deg2rad(lon2-lon1); 
   var a = 
@@ -118,8 +118,8 @@ function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
     Math.sin(dLon/2) * Math.sin(dLon/2)
     ; 
   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  var d = R * c; // Distance in km
-  return d*1000;
+  var d = R * c; // Distance in m
+  return d;
 }
 
 function deg2rad(deg) {
