@@ -18,7 +18,6 @@ app.get('/sensors/:id', sensors.getInfosCapteur);
 
 app.put('/sensors/:id', sensors.setInfoCapteur);
 
-// ... Tout le code de gestion des routes (app.get) se trouve au-dessus
 app.use(function(req, res, next){
     res.setHeader('Content-Type', 'text/plain');
     res.status(404).send('Page introuvable !');

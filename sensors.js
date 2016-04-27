@@ -63,17 +63,27 @@ exports.setInfoCapteur = function(req, res) {
 
 	console.log('Pushing update for sensor: ' + id); 	
 	
-	db.collection('sensors', function(err, collection) {
-	collection.updateOne({'id':id}, {$set: {'etat':etat}}, {safe:true}, function(err, result) {
-            if (err) {
-                console.log('Error updating sensor: ' + err);
-                res.send({'error':'An error has occurred'});
-            } else {
-				console.log('Updating sensor status, now:' + etat)
-                res.send(etat);
-            }
-        });
-    });
+	collection.findOne({'id':id}, function(err, etatActuel) {}); 
+	if(etat != etatActuel){
+		db.collection('sensors', function(err, collection) {
+			collection.updateOne({'id':id}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date()}}, {safe:true}, function(err, result) {
+				if (err) {
+					console.log('Error updating sensor: ' + err);
+					res.status(500).send({'Error':'An error has occurred'});
+				} else {
+					console.log('Updating sensor status, now:' + etat)
+					res.send(etat);
+				}
+			});
+		});
+	}else{
+		db.collection('sensors', function(err, collection) {
+			collection.updateOne({'id':id}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					res.status(200).send();
+			});
+		});
+	}
+
 };
 
 
@@ -84,20 +94,22 @@ var populateDB = function() {
 
     var sensors = [
     {
-        id: "1",
+        id: 1,
         etat: "libre",
-        latitude: "45.781459",
-		longitude: "4.872962",
-        idRue: "1",
-        dureeEtatActuel: "10"
+        latitude: 45.781459,
+		longitude: 4.872962,
+        idRue: 1,
+        derniereMaj: 1461742140,
+		dernierSigneDeVie: 1461742140
     },
     {
-        id: "2",
+        id: 2,
         etat: "depart",
-        latitude: "45.782284",
-		longitude: "4.871439",
-        idRue: "2",
-        dureeEtatActuel: "1"
+        latitude: 45.782284,
+		longitude: 4.871439,
+        idRue: 2,
+        derniereMaj: 1461742110,
+		dernierSigneDeVie: 1461742140
     }];
 
     db.collection('sensors', function(err, collection) {
