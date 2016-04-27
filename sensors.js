@@ -12,8 +12,6 @@ db.open(function(err, db) {
     if(!err) {
         console.log("Connected to 'smartparking' database");
         db.collection('sensors', {strict:true}, function(err, collection) {
-			collection.remove({});
-			populateDB();
             if (err) {
                 console.log("The 'sensors' collection doesn't exist. Creating it with sample data...");
                 populateDB();
@@ -41,7 +39,7 @@ exports.getInfosCapteur = function(req, res) {
 			console.log(err);
 			res.end();
 		}else{
-			collection.findOne({'id':id}, function(err, item) { 
+			collection.findOne({'id':parseInt(id)}, function(err, item) { 
 			res.send(item); 
         }); 
 		}
@@ -67,10 +65,10 @@ exports.setInfoCapteur = function(req, res) {
 	console.log('Pushing update for sensor: ' + id); 	
 	
 	db.collection('sensors', function(err, collection) {
-		collection.findOne({'id':id}, function(err, sensor) {
+		collection.findOne({'id':parseInt(id)}, function(err, sensor) {
 			console.log("etat actuel :" + sensor.etat);
 			if(etat != sensor.etat){
-					collection.updateOne({'id':id}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat}}, {$set: {'derniereMaj':new Date(), 'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).end();
@@ -82,7 +80,7 @@ exports.setInfoCapteur = function(req, res) {
 			}else{
 				db.collection('sensors', function(err, collection) {
 					console.log("no update");
-					collection.updateOne({'id':id}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
+					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie':new Date()}}, {safe:true}, function(err, result) {
 							res.status(200).end();
 					});
 				});
