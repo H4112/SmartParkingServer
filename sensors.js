@@ -45,6 +45,37 @@ exports.getInfosCapteur = function(req, res) {
     });
 };
 
+exports.setInfoCapteur = function(req, res) {
+    var id = req.params.id;
+	var codeEtat = req.body.etat;
+	var etat;
+	
+	console.log('sensor status code:' + codeEtat)
+
+	
+	if(codeEtat == 0){
+		etat = 'libre';
+	}else if(codeEtat == 1){
+		etat = 'depart';
+	}else if(codeEtat == 2){
+		etat = 'occupe';
+	}
+
+	console.log('Pushing update for sensor: ' + id); 	
+	
+	db.collection('sensors', function(err, collection) {
+	collection.updateOne({'id':id}, {$set: {'etat':etat}}, {safe:true}, function(err, result) {
+            if (err) {
+                console.log('Error updating sensor: ' + err);
+                res.send({'error':'An error has occurred'});
+            } else {
+				console.log('Updating sensor status, now:' + etat)
+                res.send(etat);
+            }
+        });
+    });
+};
+
 
 // ----------------------------------------
 // ----------------------------------------
