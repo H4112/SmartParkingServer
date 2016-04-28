@@ -8,17 +8,20 @@ var server = new Server('localhost', 27017, {auto_reconnect: true});
 db = new Db('smartparking', server);
 
 db.open(function(err, db) {
-	
     if(!err) {
         console.log("Connected to 'smartparking' database");
         db.collection('sensors', {strict:true}, function(err, collection) {
+        	collection.deleteMany( {}, function(err, results) {
+			    populateDB();
+			});
+        	/*
             if (err) {
                 console.log("The 'sensors' collection doesn't exist. Creating it with sample data...");
                 populateDB();
             }
+            */
         });
     } else {
-		
 		console.log(err);
 	}
 });
