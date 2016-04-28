@@ -151,8 +151,9 @@ var populateDB = function() {
 		[ 45.78187500825857, 4.872483909102812 ],
 		[ 45.7819186566518, 4.872467815848722 ]
 	];
-	int id = 1;
+	var id = 0;
     var sensors = coordinates.map(function(c) {
+    	id++;
     	return {
 	    	id: id,
 	        etat: "libre",
