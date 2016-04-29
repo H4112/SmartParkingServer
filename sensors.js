@@ -4,7 +4,7 @@ var Server = mongo.Server;
 var Db = mongo.Db;
 var BSON = mongo.BSONPure;
 
-var server = new Server('localhost', 27017, {auto_reconnect: true});
+var server = new Server('localhost', 27017, { auto_reconnect: true });
 db = new Db('smartparking', server);
 
 db.open(function(err, db) {
@@ -38,13 +38,13 @@ exports.getInfosCapteur = function(req, res) {
 	var id = req.params.id;
 	console.log('Retrieving sensor: ' + id);
     db.collection('sensors', function(err, collection) {
-		if(err){
+		if(err) {
 			console.log(err);
-			res.end();
-		}else{
-			collection.findOne({'id':parseInt(id)}, function(err, item) { 
-			res.send(item); 
-        }); 
+			res.status(500).end();
+		} else {
+			collection.findOne({ 'id': parseInt(id) }, function(err, item) { 
+				res.status(200).send(item); 
+        	}); 
 		}
     });
 };
@@ -56,12 +56,11 @@ exports.setInfoCapteur = function(req, res) {
 	
 	console.log('sensor status code:' + codeEtat)
 
-	
-	if(codeEtat == 0){
+	if(codeEtat == 0) {
 		etat = 'libre';
-	}else if(codeEtat == 1){
+	} else if(codeEtat == 1) {
 		etat = 'depart';
-	}else if(codeEtat == 2){
+	} else if(codeEtat == 2) {
 		etat = 'occupe';
 	}
 
@@ -70,8 +69,23 @@ exports.setInfoCapteur = function(req, res) {
 	db.collection('sensors', function(err, collection) {
 		collection.findOne({'id':parseInt(id)}, function(err, sensor) {
 			console.log("etat actuel :" + sensor.etat);
-			if(etat != sensor.etat){
-					collection.updateOne({'id':parseInt(id)}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, result) {
+			if(etat != sensor.etat) {
+				collection.updateOne(
+					{
+						'id': parseInt(id)
+					},
+					{
+						$set:
+							{
+								'etat':etat,
+								'derniereMaj': Date.now(),
+								'dernierSigneDeVie':Date.now()
+							}
+					},
+					{
+						safe:true
+					},
+					function(err, result) {
 						if (err) {
 							console.log('Error updating sensor: ' + err);
 							res.status(500).end();
@@ -79,8 +93,9 @@ exports.setInfoCapteur = function(req, res) {
 							console.log('Updating sensor status, now:' + etat)
 							res.status(200).end();
 						}
-					});
-			}else{
+					}
+				);
+			} else {
 				db.collection('sensors', function(err, collection) {
 					console.log("no update");
 					collection.updateOne({'id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, result) {
@@ -199,7 +214,28 @@ var populateDB = function() {
     ];
 	*/
     db.collection('sensors', function(err, collection) {
-        collection.insert(sensors, {safe:true}, function(err, result) {});
+        collection.insert(sensors, {safe:true}, function(err, result) {
+        	// Simulation
+			setInterval(function() {
+				var id = Math.floor((Math.random() * (coordinates.length - 1)) + 2);
+				var codeEtat = Math.floor(Math.random() * 3);
+				var etat;
+				if(codeEtat == 0) {
+					etat = 'libre';
+				} else if(codeEtat == 1) {
+					etat = 'depart';
+				} else if(codeEtat == 2) {
+					etat = 'occupe';
+				}
+				collection.updateOne({'id':id}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, result) {
+					if (err) {
+						console.log('Error fake-updating sensor ' + id + ': ' + err);
+					} else {
+						console.log('Fake-updating sensor ' + id + ' status, now: ' + etat);
+					}
+				});
+			}, 1000);
+        });
     });
 
 };
