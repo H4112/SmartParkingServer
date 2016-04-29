@@ -29,7 +29,18 @@ db.open(function(err, db) {
 exports.getListeCapteurs = function(req, res) {
     db.collection('sensors', function(err, collection) {
         collection.find().toArray(function(err, items) {
-            res.send(items);
+        	var capteurs = items;
+        	if(req.query.latitude && req.query.longitude && req.query.radius) {
+        		var rayon = req.query.radius;
+				var longitude = req.query.longitude;
+				var latitude = req.query.latitude;
+				//console.log("lat="+latitude+"&lon="+longitude+"&r="+rayon);
+	        	capteurs = items.filter(function(sensor) {
+					var d = getDistanceFromLatLonInM(latitude, longitude, sensor.latitude, sensor.longitude);
+					return d <= rayon;
+				});
+        	}
+            res.send(capteurs);
         });
     });
 };
@@ -105,25 +116,6 @@ exports.setInfoCapteur = function(req, res) {
 			}
 		});
 	});
-
-};
-
-exports.getCapteursAProximite = function(req, res) {
-	var rayon = req.body.rayon;
-	var longitude = req.body.longitude;
-	var latitude = req.body.latitude;
-	
-    db.collection('sensors', function(err, collection) {
-        collection.find().toArray(function(err, items) {
-			var capteurs = items.map(function(sensor){
-				var d = getDistanceFromLatLonInM(latitude, longitude, sensor.latitude, sensor.latitude);
-				if(d<= rayon){
-					return sensor;
-				}else return null;
-			});
-            res.status(200).send(capteurs);
-        });
-    });
 };
 
 function getDistanceFromLatLonInM(lat1,lon1,lat2,lon2) {
@@ -150,32 +142,48 @@ function deg2rad(deg) {
 
 var populateDB = function() {
 	var coordinates = [
-		[ 45.7822840, 4.871439000 ],
-		[ 45.7816303, 4.872742742 ],
-		[ 45.7816752, 4.872726649 ],
-		[ 45.7817189, 4.872706532 ],
-		[ 45.7817652, 4.872685074 ],
-		[ 45.7818075, 4.872666299 ],
-		[ 45.7818538, 4.872650206 ],
-		[ 45.7818948, 4.872631430 ],
-		[ 45.7819398, 4.872609972 ],
-		[ 45.7815945, 4.872608631 ],
-		[ 45.7816422, 4.872589856 ],
-		[ 45.7816832, 4.872569739 ],
-		[ 45.7817361, 4.872550964 ],
-		[ 45.7817824, 4.872529506 ],
-		[ 45.7818260, 4.872509390 ],
-		[ 45.7818750, 4.872483909 ],
-		[ 45.7819186, 4.872467815 ],
-		[ 45.7814760, 4.872952000 ],
-		[ 45.7814825, 4.872983125 ],
-		[ 45.7814890, 4.873014250 ],
-		[ 45.7814955, 4.873045375 ],
-		[ 45.7815020, 4.873076500 ],
-		[ 45.7815085, 4.873107625 ],
-		[ 45.7815150, 4.873138750 ],
-		[ 45.7815215, 4.873169875 ],
-		[ 45.7815280, 4.873201000 ]
+		[ 45.7822840, 4.87143900 ],
+		[ 45.7816303, 4.87274274 ],
+		[ 45.7816752, 4.87272664 ],
+		[ 45.7817189, 4.87270653 ],
+		[ 45.7817652, 4.87268507 ],
+		[ 45.7818075, 4.87266629 ],
+		[ 45.7818538, 4.87265020 ],
+		[ 45.7818948, 4.87263143 ],
+		[ 45.7819398, 4.87260997 ],
+		[ 45.7815945, 4.87260863 ],
+		[ 45.7816422, 4.87258985 ],
+		[ 45.7816832, 4.87256973 ],
+		[ 45.7817361, 4.87255096 ],
+		[ 45.7817824, 4.87252950 ],
+		[ 45.7818260, 4.87250939 ],
+		[ 45.7818750, 4.87248390 ],
+		[ 45.7819186, 4.87246781 ],
+		[ 45.7814760, 4.87295200 ],
+		[ 45.7814825, 4.87298312 ],
+		[ 45.7814890, 4.87301425 ],
+		[ 45.7814955, 4.87304537 ],
+		[ 45.7815020, 4.87307650 ],
+		[ 45.7815085, 4.87310762 ],
+		[ 45.7815150, 4.87313875 ],
+		[ 45.7815215, 4.87316987 ],
+		[ 45.7815280, 4.87320100 ],
+		[ 45.7817620, 4.87172100 ],
+		[ 45.7817689, 4.87175257 ],
+		[ 45.7817759, 4.87178414 ],
+		[ 45.7817828, 4.87181571 ],
+		[ 45.7817897, 4.87184729 ],
+		[ 45.7817966, 4.87187886 ],
+		[ 45.7818036, 4.87191043 ],
+		[ 45.7818105, 4.87194200 ],
+		[ 45.7818174, 4.87197357 ],
+		[ 45.7818244, 4.87200514 ],
+		[ 45.7818313, 4.87203671 ],
+		[ 45.7818382, 4.87206829 ],
+		[ 45.7818451, 4.87209986 ],
+		[ 45.7818521, 4.87213143 ],
+		[ 45.7818590, 4.87216300 ],
+		[ 45.7818659, 4.87219457 ]
 	];
 	var id = 0;
     var sensors = coordinates.map(function(c) {

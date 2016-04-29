@@ -20,8 +20,6 @@ app.get('/sensors/:id', sensors.getInfosCapteur);
 
 app.put('/sensors/:id', urlencodedParser, sensors.setInfoCapteur);
 
-app.get('/sensors/radius', urlencodedParser, sensors.getCapteursAProximite);
-
 app.use(function(req, res, next){
     res.setHeader('Content-Type', 'text/plain');
     res.status(404).send('Page introuvable !');
