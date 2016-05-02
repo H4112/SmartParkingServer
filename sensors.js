@@ -1,3 +1,5 @@
+'use strict';
+
 var mongo = require('mongodb');
 var https = require('https');
 var async = require('async');
@@ -7,22 +9,13 @@ var Db = mongo.Db;
 var BSON = mongo.BSONPure;
 
 var server = new Server('localhost', 27017, { auto_reconnect: true });
-db = new Db('smartparking', server);
+var db = new Db('smartparking', server);
 
 db.open(function(err, db) {
     if(!err) {
         console.log("Connected to 'smartparking' database");
-        db.collection('sensors', {strict:true}, function(err, collection) {
-        	collection.deleteMany( {}, function(err, results) {
-			    populateDB();
-			});
-        	/*
-            if (err) {
-                console.log("The 'sensors' collection doesn't exist. Creating it with sample data...");
-                populateDB();
-            }
-            */
-        });
+        populateDB();
+
         setInterval(function() {
         	updateParkings();
 		}, 15*60*1000); // every 15 min
@@ -36,39 +29,49 @@ exports.getListeCapteurs = function(req, res) {
 	async.parallel({
 		capteurs: function(callback) {
 			db.collection('sensors', function(err, collection) {
-				collection.find().toArray(function(err, items) {
-		        	var capteurs = items;
-		        	if(req.query.latitude && req.query.longitude && req.query.radius) {
-		        		var rayon = req.query.radius;
-						var longitude = req.query.longitude;
-						var latitude = req.query.latitude;
-						//console.log("lat="+latitude+"&lon="+longitude+"&r="+rayon);
-			        	capteurs = capteurs.filter(function(sensor) {
-							var d = getDistanceFromLatLonInM(latitude, longitude, sensor.latitude, sensor.longitude);
-							return d <= rayon;
-						});
-		        	}
-		            callback(null, capteurs);
-		        });
+				if(req.query.latitude && req.query.longitude && req.query.radius) {
+					collection.find({
+						loc: {
+							$near : { 
+								$geometry : {
+									type : "Point",
+	                                coordinates : [ parseFloat(req.query.longitude) , parseFloat(req.query.latitude) ]
+	                            },
+	                            $maxDistance : parseInt(req.query.radius)
+	                     	}
+	                    }
+					}).toArray(function(err, items) {
+					    callback(null, items);
+					});
+				} else {
+					collection.find().toArray(function(err, items) {
+			            callback(null, items);
+			        });
+			    }
 		    });
 		},
 		parkings: function(callback) {
 			db.collection('parkings', function(err, collection) {
-				collection.find().toArray(function(err, items) {
-		        	var parkings = items;
-		        	if(req.query.latitude && req.query.longitude && req.query.radius) {
-		        		var rayon = req.query.radius;
-						var longitude = req.query.longitude;
-						var latitude = req.query.latitude;
-						//console.log("lat="+latitude+"&lon="+longitude+"&r="+rayon);
-			        	parkings = parkings.filter(function(parking) {
-							var d = getDistanceFromLatLonInM(latitude, longitude, parking.latitude, parking.longitude);
-							return d <= rayon;
-						});
-		        	}
-		            callback(null, parkings);
-		        });
-		    });
+				if(req.query.latitude && req.query.longitude && req.query.radius) {
+					collection.find({
+						loc: {
+							$near : { 
+								$geometry : {
+									type : "Point",
+	                                coordinates : [ parseFloat(req.query.longitude) , parseFloat(req.query.latitude) ]
+	                            },
+	                            $maxDistance : parseInt(req.query.radius)
+	                     	}
+	                    }
+					}).toArray(function(err, items) {
+					    callback(null, items);
+					});
+				} else {
+					collection.find().toArray(function(err, items) {
+			            callback(null, items);
+			        });
+			    }
+			});
 		}
 	}, function(err, results) {
 		if(!err) {
@@ -142,35 +145,36 @@ exports.setInfoCapteur = function(req, res) {
 					}
 				);
 			} else {
-				db.collection('sensors', function(err, collection) {
-					console.log("no update");
-					collection.updateOne({'_id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, result) {
-							res.status(200).end();
-					});
+				console.log("no update");
+				collection.updateOne({'_id':parseInt(id)}, {$set: {'dernierSigneDeVie': Date.now()}}, {safe:true}, function(err, result) {
+						res.status(200).end();
 				});
 			}
 		});
 	});
 };
 
-function getDistanceFromLatLonInM(lat1,lon1,lat2,lon2) {
-  var R = 6371008.8; // Radius of the earth in m
-  var dLat = deg2rad(lat2-lat1);  // deg2rad below
-  var dLon = deg2rad(lon2-lon1); 
-  var a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2)
-    ; 
-  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  var d = R * c; // Distance in m
-  return d;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI/180)
-}
-
+exports.manage = function(req, res) {
+	if(req.query.reset) {
+		console.log('Reset');
+		populateDB();
+		res.status(200).end();
+	}
+	if(req.query.generate) {
+		console.log('Generate: '+req.query.generate);
+		if(req.query.generate > 0) {
+			generate(req.query.generate);
+		}
+		countSensors(function(nb) {
+			res.status(200).send(nb + ' sensors');
+		});
+	}
+	if(req.query.simulate) {
+		console.log('Simulate: '+req.query.simulate);
+		simulate(req.query.simulate);
+		res.status(200).end();
+	}
+};
 
 // ----------------------------------------
 // ----------------------------------------
@@ -178,7 +182,7 @@ function deg2rad(deg) {
 function updateParkings() {
 	https.get({
 		hostname: 'download.data.grandlyon.com',
-		path: '/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&outputformat=GEOJSON&request=GetFeature&typename=pvo_patrimoine_voirie.pvoparkingtr&SRSNAME=urn:ogc:def:crs:EPSG::4258',
+		path: '/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&outputformat=GEOJSON&request=GetFeature&typename=pvo_patrimoine_voirie.pvoparkingtr&SRSNAME=urn:ogc:def:crs:EPSG::4326',
 		auth: 'rsauget@me.com:Ih(mjBRnl#7@,PDdoP=M'
 	}, function(res) {
 		var body = '';
@@ -190,8 +194,7 @@ function updateParkings() {
 				var parkings = JSON.parse(body);
 				parkings = parkings.features.map(function(f) {
 					var parking = f.properties;
-					parking.longitude = f.geometry.coordinates[0];
-					parking.latitude = f.geometry.coordinates[1];
+					parking.loc = f.geometry;
 					parking._id = parking.pkgid;
 					delete parking.pkgid;
 					return parking;
@@ -201,6 +204,11 @@ function updateParkings() {
 	        		parkings.forEach(function(parking) {
 	        			collection.save(parking);
 	        		});
+	        		collection.ensureIndex( { loc: "2dsphere" }, function(err, result) {
+	        			if(err) {
+	        				console.log(err);
+	        			}
+	        		});
 	        		console.log('Parkings updated');
 				});
 			} catch(e) {
@@ -208,6 +216,95 @@ function updateParkings() {
 			}
 		});
 	});
+}
+
+function generate(n) {
+	var minLat = 45.720935;
+	var maxLat = 45.787051;
+	var minLon = 4.788086;
+	var maxLon = 4.887993;
+	
+	var sensors = [];
+
+	for(var i=0;i<n;i++) {
+		sensors.push({
+	        etat: "libre",
+	        idRue: 100000,
+	        derniereMaj: Date.now(),
+			dernierSigneDeVie: Date.now(),
+			adresse: 'Adresse inconnue',
+			loc: {
+		        	type: "Point",
+		        	coordinates: [ minLon + Math.random() * (maxLon - minLon), minLat + Math.random() * (maxLat - minLat) ]
+		        }
+	    });
+	}
+	db.collection('sensors', function(err, collection) {
+	    collection.insert(sensors, {safe:true}, function(err, result) {
+	    	if(err) {
+	    		console.log(err);
+	    	}
+	    });
+	});
+}
+
+function normalizeLongitude(lon) {
+    var n = Math.PI;
+    if (lon > n) {
+        lon = lon - 2 * n
+    } else if (lon < - n) {
+        lon = lon + 2 * n
+    }
+    return lon;
+}
+
+function rad(dg) {
+    return (dg * Math.PI / 180);
+}
+
+function deg(rd) {
+    return (rd * 180 / Math.PI);
+}
+
+function countSensors(callback) {
+	db.collection('sensors', function(err, collection) {
+		collection.count({}, function(error, numOfDocs) {
+			callback(numOfDocs);
+		});
+	});
+}
+
+var intervalId = null;
+function simulate(interval) {
+	if(intervalId === null && interval > 0) {
+		db.collection('sensors', function(err, collection) {
+			collection.count({}, function(error, numOfDocs){
+				// Simulation
+				intervalId = setInterval(function() {
+					var id = Math.floor((Math.random() * (numOfDocs - 1)) + 2);
+					var codeEtat = Math.floor(Math.random() * 3);
+					var etat;
+					if(codeEtat == 0) {
+						etat = 'libre';
+					} else if(codeEtat == 1) {
+						etat = 'depart';
+					} else if(codeEtat == 2) {
+						etat = 'occupe';
+					}
+					collection.updateOne({'_id':id}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, result) {
+						if (err) {
+							console.log('Error fake-updating sensor ' + id + ': ' + err);
+						} else {
+							console.log('Fake-updating sensor ' + id + ' status, now: ' + etat);
+						}
+					});
+				}, interval);
+			});
+		});
+	} else if(intervalId !== null && interval == 0) {
+		clearInterval(intervalId);
+		intervalId = null;
+	}
 }
 
 function populateDB() {
@@ -271,71 +368,55 @@ function populateDB() {
 	    	return {
 		    	_id: id,
 		        etat: "libre",
-		        latitude: c[0],
-				longitude: c[1],
 		        idRue: i,
 		        derniereMaj: Date.now(),
 				dernierSigneDeVie: Date.now(),
-				adresse: 'Adresse inconnue'
+				adresse: 'Adresse inconnue',
+				loc: {
+		        	type: "Point",
+		        	coordinates: [ c[1], c[0] ]
+		        }
 	    	}
 	    }));
 	}
     
     db.collection('sensors', function(err, collection) {
-    	if(!err) {
+    	collection.deleteMany({}, function(err, results) {
 	        collection.insert(sensors, {safe:true}, function(err, result) {
-	        	// Lookup address
-	        	var i = 0;
-	        	var interval = setInterval(function() {
-	        		if(i == sensors.length) {
-	        			clearInterval(interval);
-	        			return;
+	        	collection.ensureIndex( { loc: "2dsphere" }, function(err, result) {
+	        		if(err) {
+	        			console.log(err);
 	        		}
-	        		var sensor = sensors[i];
-	        		i++;
-	        		// Reverse geocoding
-		        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng='+sensor.latitude+','+sensor.longitude+'&sensor=true', function(res) {
-		        		var body = '';
-		        		res.on('data', function(d) {
-		        			body += d;
-						});
-						res.on('end', function() {
-							var adresse = 'Adresse inconnue';
-							try {
-		        				var data = JSON.parse(body);
-								adresse = data.results[0].formatted_address;
-							} catch(e) {
-								console.log('JSON error : '+e);
-								console.log(body);
-							}
-							collection.updateOne({'_id':sensor._id}, {$set: {'adresse': adresse}}, {safe:true}, function(err, result) {});
-						});
-		    		});
-	        	}, 500);
-
-	        	// Simulation
-				setInterval(function() {
-					var id = Math.floor((Math.random() * (sensors.length - 1)) + 2);
-					var codeEtat = Math.floor(Math.random() * 3);
-					var etat;
-					if(codeEtat == 0) {
-						etat = 'libre';
-					} else if(codeEtat == 1) {
-						etat = 'depart';
-					} else if(codeEtat == 2) {
-						etat = 'occupe';
-					}
-					collection.updateOne({'_id':id}, {$set: {'etat':etat, 'derniereMaj': Date.now(), 'dernierSigneDeVie':Date.now()}}, {safe:true}, function(err, result) {
-						if (err) {
-							console.log('Error fake-updating sensor ' + id + ': ' + err);
-						} else {
-							console.log('Fake-updating sensor ' + id + ' status, now: ' + etat);
-						}
-					});
-				}, 1000);
+		        	// Lookup address
+		        	var i = 0;
+		        	var interval = setInterval(function() {
+		        		if(i == sensors.length) {
+		        			clearInterval(interval);
+		        			return;
+		        		}
+		        		var sensor = sensors[i];
+		        		i++;
+		        		// Reverse geocoding
+			        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng='+sensor.loc.coordinates[1]+','+sensor.loc.coordinates[0]+'&sensor=true', function(res) {
+			        		var body = '';
+			        		res.on('data', function(d) {
+			        			body += d;
+							});
+							res.on('end', function() {
+								var adresse = 'Adresse inconnue';
+								try {
+			        				var data = JSON.parse(body);
+									adresse = data.results[0].formatted_address;
+								} catch(e) {
+									console.log('JSON error : '+e);
+									console.log(body);
+								}
+								collection.updateOne({'_id':sensor._id}, {$set: {'adresse': adresse}}, {safe:true}, function(err, result) {});
+							});
+			    		});
+		        	}, 500);
+		        });
 	        });
-	    } else {
-	    	console.log(err);
-	    }
+		});
     });
 };

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+'use strict';
 var express = require('express');
 var sensors = require('./sensors');
 var https = require('https');
@@ -19,6 +20,8 @@ app.get('/sensors', sensors.getListeCapteurs);
 app.get('/sensors/:id', sensors.getInfosCapteur);
 
 app.put('/sensors/:id', urlencodedParser, sensors.setInfoCapteur);
+
+app.get('/manage', sensors.manage);
 
 app.use(function(req, res, next){
     res.setHeader('Content-Type', 'text/plain');
