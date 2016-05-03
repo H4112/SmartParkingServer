@@ -23,6 +23,12 @@ app.put('/sensors/:id', urlencodedParser, sensors.setInfoCapteur);
 
 app.get('/manage', sensors.manage);
 
+app.get('/', function(req, res) {
+    res.redirect('/parking.html');
+});
+
+app.use(express.static('public'));
+
 app.use(function(req, res, next){
     res.setHeader('Content-Type', 'text/plain');
     res.status(404).send('Page introuvable !');

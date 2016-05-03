@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style type="text/css">
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+      }
+      #settings {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 200px;
+        height: 250px;
+        border: 1px solid black;
+        background: white;
+        padding: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="settings">
+      <b>Animation : </b><label><input type="radio" name="animation" value="1"/> on </label><label><input type="radio" name="animation" value="0"/> off</label>
+    </div>
+    <div id="map"></div>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+      var map;
+      var markers = [];
+      var infos = [];
+      var capteurs = [];
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 45.781842, lng: 4.872482},
+          zoom: 19
+        });
+        $.get('https://parking.rsauget.fr:8080/sensors', function(data) {
+          data.capteurs.forEach(function(capteur) {
+            capteurs[capteur._id] = capteur;
+            markers[capteur._id] = new google.maps.Marker({
+                position: new google.maps.LatLng(capteur.loc.coordinates[1],capteur.loc.coordinates[0]),
+                title: 'Capteur ' + capteur._id,
+                animation: google.maps.Animation.DROP,
+                icon: 'ic_inconnu.png',
+                map: map
+            });
+            infos[capteur._id] = new google.maps.InfoWindow({
+              content: 'Chargement...'
+            });
+            markers[capteur._id].addListener('click', function() {
+              infos[capteur._id].open(map, markers[capteur._id]);
+            });
+            updateMarker(capteur);
+          });
+          setInterval(function() {
+            update();
+          }, 5000);
+        });
+      }
+
+      $('#map').on('click', '.libre', function() {
+        var id = $(this).attr('data-id');
+        $.ajax({
+           url: 'https://parking.rsauget.fr:8080/sensors/'+id,
+           type: 'PUT',
+           data: { 'etat' : '0' },
+           success: function(response) {
+             update();
+           }
+        });
+      }).on('click', '.depart', function() {
+        var id = $(this).attr('data-id');
+        $.ajax({
+           url: 'https://parking.rsauget.fr:8080/sensors/'+id,
+           type: 'PUT',
+           data: { 'etat' : '1' },
+           success: function(response) {
+             update();
+           }
+        });
+      }).on('click', '.occupe', function() {
+        var id = $(this).attr('data-id');
+        $.ajax({
+           url: 'https://parking.rsauget.fr:8080/sensors/'+id,
+           type: 'PUT',
+           data: { 'etat' : '2' },
+           success: function(response) {
+             update();
+           }
+        });
+      });
+
+      function update() {
+        $.get('https://parking.rsauget.fr:8080/sensors', function(data) {
+          data.capteurs.forEach(function(capteur) {
+            capteurs[capteur._id] = capteur;
+            updateMarker(capteur);
+          });
+        });
+      }
+
+      function updateMarker(capteur) {
+        var image;
+        if(capteur.etat == 'libre') {
+          image = 'ic_libre.png';
+        } else if(capteur.etat == 'depart') {
+          image = 'ic_en_mouvement.png';
+        } else if(capteur.etat == 'occupe') {
+          image = 'ic_occupee.png';
+        } else {
+          image = 'ic_inconnu.png';
+        }
+        markers[capteur._id].setIcon(image);
+        infos[capteur._id].setContent('<h3>Capteur '+capteur._id+'</h3>' +
+                '<b>Adresse :</b> '+capteur.adresse+'<br>' +
+                '<b>Etat :</b> '+capteur.etat+'<br>' +
+                '<button class="libre" data-id="'+capteur._id+'">Libre</button>'+'<button class="depart" data-id="'+capteur._id+'">Départ</button>'+'<button class="occupe" data-id="'+capteur._id+'">Occupé</button>');
+      }
+    </script>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwgZokqhdop2tHkVD9bc875cdZUUdEkqs&callback=initMap">
+    </script>
+  </body>
+</html>
