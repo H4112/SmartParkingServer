@@ -397,7 +397,7 @@ function populateDB() {
 		        		var sensor = sensors[i];
 		        		i++;
 		        		// Reverse geocoding
-			        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng='+sensor.loc.coordinates[1]+','+sensor.loc.coordinates[0]+'&sensor=true', function(res) {
+			        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng='+sensor.loc.coordinates[1]+','+sensor.loc.coordinates[0]+'&sensor=true&key=AIzaSyCKBQTVUUKJNEE1zRzBRv5aTfOpuGgyIqo', function(res) {
 			        		var body = '';
 			        		res.on('data', function(d) {
 			        			body += d;
