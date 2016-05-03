@@ -3,6 +3,7 @@
 var mongo = require('mongodb');
 var https = require('https');
 var async = require('async');
+var keys = require('./keys');
 
 var Server = mongo.Server;
 var Db = mongo.Db;
@@ -183,7 +184,7 @@ function updateParkings() {
 	https.get({
 		hostname: 'download.data.grandlyon.com',
 		path: '/wfs/rdata?SERVICE=WFS&VERSION=2.0.0&outputformat=GEOJSON&request=GetFeature&typename=pvo_patrimoine_voirie.pvoparkingtr&SRSNAME=urn:ogc:def:crs:EPSG::4326',
-		auth: 'rsauget@me.com:Ih(mjBRnl#7@,PDdoP=M'
+		auth: keys.grandlyon
 	}, function(res) {
 		var body = '';
 		res.on('data', function(d) {
@@ -397,7 +398,7 @@ function populateDB() {
 		        		var sensor = sensors[i];
 		        		i++;
 		        		// Reverse geocoding
-			        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng='+sensor.loc.coordinates[1]+','+sensor.loc.coordinates[0]+'&sensor=true&key=AIzaSyCKBQTVUUKJNEE1zRzBRv5aTfOpuGgyIqo', function(res) {
+			        	https.get('https://maps.googleapis.com/maps/api/geocode/json?latlng=' + sensor.loc.coordinates[1] + ',' + sensor.loc.coordinates[0] + '&sensor=true&key=' + keys.google, function(res) {
 			        		var body = '';
 			        		res.on('data', function(d) {
 			        			body += d;
