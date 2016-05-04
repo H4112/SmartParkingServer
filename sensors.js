@@ -12,6 +12,8 @@ var BSON = mongo.BSONPure;
 var server = new Server('localhost', 27017, { auto_reconnect: true });
 var db = new Db('smartparking', server);
 
+var simulation = 0;
+
 db.open(function(err, db) {
     if(!err) {
         console.log("Connected to 'smartparking' database");
@@ -160,7 +162,9 @@ exports.manage = function(req, res) {
 		console.log('Reset');
 		populateDB();
 		res.status(200).end();
+		return;
 	}
+	/*
 	if(req.query.generate) {
 		console.log('Generate: '+req.query.generate);
 		if(req.query.generate > 0) {
@@ -170,11 +174,15 @@ exports.manage = function(req, res) {
 			res.status(200).send(nb + ' sensors');
 		});
 	}
+	*/
 	if(req.query.simulate) {
 		console.log('Simulate: '+req.query.simulate);
-		simulate(req.query.simulate);
+		simulate(parseInt(req.query.simulate));
 		res.status(200).end();
+		return;
 	}
+	res.status(200).send({ simulation: simulation });
+
 };
 
 // ----------------------------------------
@@ -249,23 +257,6 @@ function generate(n) {
 	});
 }
 
-function normalizeLongitude(lon) {
-    var n = Math.PI;
-    if (lon > n) {
-        lon = lon - 2 * n
-    } else if (lon < - n) {
-        lon = lon + 2 * n
-    }
-    return lon;
-}
-
-function rad(dg) {
-    return (dg * Math.PI / 180);
-}
-
-function deg(rd) {
-    return (rd * 180 / Math.PI);
-}
 
 function countSensors(callback) {
 	db.collection('sensors', function(err, collection) {
@@ -277,10 +268,14 @@ function countSensors(callback) {
 
 var intervalId = null;
 function simulate(interval) {
-	if(intervalId === null && interval > 0) {
+	if(interval > 0) {
+		if(intervalId !== null) {
+			clearInterval(intervalId);
+		}
 		db.collection('sensors', function(err, collection) {
 			collection.count({}, function(error, numOfDocs){
 				// Simulation
+				simulation = interval;
 				intervalId = setInterval(function() {
 					var id = Math.floor((Math.random() * (numOfDocs - 1)) + 2);
 					var codeEtat = Math.floor(Math.random() * 3);
@@ -305,6 +300,7 @@ function simulate(interval) {
 	} else if(intervalId !== null && interval == 0) {
 		clearInterval(intervalId);
 		intervalId = null;
+		simulation = 0;
 	}
 }
 
